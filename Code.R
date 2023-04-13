@@ -1,16 +1,30 @@
-install.packages(c("ggplot2", "readr",  "dplyr", "fastDummies", "stargazer", "Rcpp", "arrow", "parquetize"))
+install.packages(c("ggplot2", "readr",  "dplyr", "fastDummies", "stargazer", "Rcpp", "arrow", "parquetize", "quantreg"))
 library(scales)
 library(arrow)
 library(parquetize)
 library(dplyr)
 library(readr)
-data <- read_csv("dataps2s2023.csv")
+library(quantreg)
+library(ggplot2)
 
+data <- read_csv("dataps2s2023.csv")
+data <- read_parquet("dataps2s2023.parquet")
+
+z <- getwd()
+z <- paste(z,'/data.parquet')
+
+tmp_pqt <- tempfile(fileext = ".parquet")
+download.file("https://github.com/hiromn2/Buenos-Usu-rios-2/blob/main/dataps2s2023.parquet",
+              destfile = z)
+
+arrow:::read_parquet(tmp_pqt)
 
 csv_to_parquet(
   path_to_csv = "dataps2s2023.csv",
   path_to_parquet = getwd()
 )
+
+
 
 #Question 1
 
@@ -28,7 +42,6 @@ unique_data_2007 <- data_2007[!duplicated(data_2007$market),]
 unique_data_2007
 
 
-library(ggplot2)
 
 
 ggplot(data = unique_data_2007, aes(x= treat_intesity)) +
@@ -40,8 +53,8 @@ ggplot(data = unique_data_2007, aes(x= treat_intesity)) +
 data_2008 <- data %>% filter(year == "2008")
 data_2011 <- data %>% filter(year == "2011")
 
-
-
+nlrq(private_voucher~treat_intesity , data=data_2008, tau=0.5, trace=FALSE,method="L-BFGS-B")
+#????????????????????????????????????????????????????
 
 
 
@@ -87,3 +100,4 @@ ggplot(plot_data) +
 
 
 #Question 5
+
