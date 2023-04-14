@@ -1,4 +1,4 @@
-install.packages(c("ggplot2", "readr",  "dplyr", "fastDummies", "stargazer", "Rcpp", "arrow", "parquetize", "quantreg"))
+#install.packages(c("ggplot2", "readr",  "dplyr", "fastDummies", "stargazer", "Rcpp", "arrow", "parquetize", "quantreg"))
 library(scales)
 library(arrow)
 library(parquetize)
@@ -6,9 +6,11 @@ library(dplyr)
 library(readr)
 library(quantreg)
 library(ggplot2)
+library(locfit)
 
 data <- read_csv("dataps2s2023.csv")
-data <- read_parquet("dataps2s2023.parquet")
+#data <- read_parquet("dataps2s2023.parquet")
+
 
 z <- getwd()
 z <- paste(z,'/data.parquet')
@@ -53,8 +55,41 @@ ggplot(data = unique_data_2007, aes(x= treat_intesity)) +
 data_2008 <- data %>% filter(year == "2008")
 data_2011 <- data %>% filter(year == "2011")
 
-nlrq(private_voucher~treat_intesity , data=data_2008, tau=0.5, trace=FALSE,method="L-BFGS-B")
-#????????????????????????????????????????????????????
+#fit <- locfit(data_2008$school_inprogram ~ lp(data_2008$treat_intesity, degree = 2))
+fit <- lm(school_inprogram ~ poly(treat_intesity,8), data = data_2008)
+plot(data_2008$treat_intesity, data_2008$school_inprogram, col = "blue", pch = 19)
+lines(sort(data_2008$treat_intesity),                 # Draw polynomial regression curve
+      fitted(fit)[order(data_2008$treat_intesity)],
+      col = "red",
+      type = "l")
+
+
+
+# Generate some sample data
+#x <- seq(-5, 5, length.out=100)
+#y <- sin(x) + rnorm(100, 0, 0.1)
+
+# Fit a local polynomial regression of degree 2
+x <- data_2008$treat_intesity
+y <- data_2008$school_inprogram
+fit <- lm(school_inprogram ~ poly(treat_intesity,8), data = data_2008)
+
+# Calculate the predicted values and confidence intervals
+pred <- predict(fit, se=T)
+pred_df <- data.frame(x=x, y=pred$fit, lower=pred$fit-1.96*pred$se.fit, upper=pred$fit+1.96*pred$se.fit)
+
+pred_df <- pred_df %>% arrange(desc(pred_df))
+pred_df <- pred_df[-1,]
+# Create the plot
+library(ggplot2)
+ggplot(data.frame(x=x, y=y), aes(x=x, y=y)) +
+  geom_point() +
+  geom_ribbon(data=pred_df, aes(x=x, ymin=lower, ymax=upper), alpha=0.3) +
+  geom_line(data=pred_df, aes(x=x, y=y), color="red") +
+  labs(x="x", y="y", title="Local Polynomial Regression") +
+  theme_bw()
+
+
 
 
 
@@ -73,10 +108,16 @@ library(stargazer)
 
 rm(data_2007, unique_data_2007)
 
+#model1 <- lm(ptje_mate4b_alu ~ market + year + year_2006*treat_intesity + year_2007*treat_intesity
+#             + year_2008*treat_intesity + year_2009*treat_intesity+ year_2010*treat_intesity + year_2011*treat_intesity, data = data)
+#model2 <- lm(ptje_lect4b_alu ~ market + year + year_2006*treat_intesity + year_2007*treat_intesity
+#             + year_2008*treat_intesity + year_2009*treat_intesity+ year_2010*treat_intesity + year_2011*treat_intesity, data = data)
+
 model1 <- lm(ptje_mate4b_alu ~ market + year + year_2006*treat_intesity + year_2007*treat_intesity
              + year_2008*treat_intesity + year_2009*treat_intesity+ year_2010*treat_intesity + year_2011*treat_intesity, data = data)
 model2 <- lm(ptje_lect4b_alu ~ market + year + year_2006*treat_intesity + year_2007*treat_intesity
              + year_2008*treat_intesity + year_2009*treat_intesity+ year_2010*treat_intesity + year_2011*treat_intesity, data = data)
+
 stargazer(model1, model2)
 
 
